@@ -1,7 +1,7 @@
 import logging
 import uuid
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Form
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -55,7 +55,8 @@ if os.path.exists(frontend_dir):
 @app.get("/")
 async def root():
     """Serve the frontend"""
-    return JSONResponse({"message": "Large File Upload API", "docs": "/docs"})
+    with open(os.path.join(frontend_dir, "index.html"), "r") as f:
+        return HTMLResponse(content=f.read())
 
 
 @app.post("/api/upload/init")
@@ -255,6 +256,41 @@ async def get_config():
     return JSONResponse({
         "chunk_size": settings.chunk_size,
         "max_file_size": settings.max_file_size
+    })
+
+
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint with configuration diagnostics"""
+    
+    # Check Azure Storage configuration
+    azure_configured = bool(settings.azure_storage_connection_string or 
+                           (settings.azure_storage_account_name and settings.azure_storage_account_key))
+    
+    # Determine if using Azurite (emulator) or real Azure
+    is_azurite = "azurite" in settings.azure_storage_connection_string.lower() if settings.azure_storage_connection_string else False
+    
+    return JSONResponse({
+        "status": "healthy",
+        "app_name": settings.app_name,
+        "app_version": settings.app_version,
+        "config": {
+            "host": settings.host,
+            "port": settings.port,
+            "debug": settings.debug,
+            "chunk_size": settings.chunk_size,
+            "max_file_size": settings.max_file_size,
+            "redis": {
+                "host": settings.redis_host,
+                "port": settings.redis_port
+            },
+            "azure_storage": {
+                "configured": azure_configured,
+                "using_azurite_emulator": is_azurite,
+                "container_name": settings.azure_storage_container_name,
+                "account_name": settings.azure_storage_account_name or "(not configured)"
+            }
+        }
     })
 
 

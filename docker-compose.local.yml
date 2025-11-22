@@ -13,11 +13,19 @@ services:
       - CHUNK_SIZE=52428800
       - MAX_FILE_SIZE=1099511627776
     depends_on:
-      - redis
-      - azurite
+      redis:
+        condition: service_started
+      azurite:
+        condition: service_started
     networks:
       - upload_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   redis:
     image: redis:7-alpine
@@ -28,6 +36,11 @@ services:
     networks:
       - upload_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
@@ -37,7 +50,7 @@ services:
       - "10002:10002"
     volumes:
       - azurite_data:/data
-    command: azurite --silent --location /data
+    command: azurite --silent --location /data --blobHost 0.0.0.0
     networks:
       - upload_network
     restart: unless-stopped
