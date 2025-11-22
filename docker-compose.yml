@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CHUNK_SIZE=52428800
+      - MAX_FILE_SIZE=1099511627776
+    depends_on:
+      - redis
+    networks:
+      - upload_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - upload_network
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+networks:
+  upload_network:
+    driver: bridge

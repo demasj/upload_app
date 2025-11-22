@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Large File Upload - Azure Blob Storage</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="file"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="file"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="file"]::file-selector-button {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-right: 10px;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: #5568d3;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e0e0e0;
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #ff5252;
+        }
+
+        .progress-section {
+            display: none;
+            margin-bottom: 25px;
+        }
+
+        .progress-section.active {
+            display: block;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-value {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        .status-message.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            border-left: 4px solid #388e3c;
+        }
+
+        .status-message.error {
+            background: #ffebee;
+            color: #d32f2f;
+            border-left: 4px solid #d32f2f;
+        }
+
+        .status-message.warning {
+            background: #fff3e0;
+            color: #f57c00;
+            border-left: 4px solid #f57c00;
+        }
+
+        .upload-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #666;
+            display: none;
+        }
+
+        .upload-info.active {
+            display: block;
+        }
+
+        .upload-info-item {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .upload-info-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .upload-info-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .upload-info-value {
+            color: #667eea;
+            word-break: break-all;
+        }
+
+        .auto-resume-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .auto-resume-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-primary {
+                grid-column: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📤 Upload File</h1>
+        <p class="subtitle">Upload large files to Azure Blob Storage with resume capability</p>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="form-group">
+            <label for="fileInput">Select File</label>
+            <input type="file" id="fileInput">
+            <div class="progress-value" id="fileSize"></div>
+        </div>
+
+        <div class="auto-resume-checkbox">
+            <input type="checkbox" id="autoResume" checked>
+            <label for="autoResume" style="margin: 0; cursor: pointer;">Auto-resume on connection loss</label>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" id="uploadBtn">Start Upload</button>
+            <button class="btn-secondary" id="resumeBtn" style="display: none;">Resume Upload</button>
+            <button class="btn-danger" id="cancelBtn" style="display: none;">Cancel Upload</button>
+        </div>
+
+        <div id="uploadInfo" class="upload-info">
+            <div class="upload-info-item">
+                <span class="upload-info-label">Upload ID:</span>
+                <span class="upload-info-value" id="uploadId"></span>
+            </div>
+            <div class="upload-info-item">
+                <span class="upload-info-label">Filename:</span>
+                <span class="upload-info-value" id="filename"></span>
+            </div>
+            <div class="upload-info-item">
+                <span class="upload-info-label">File Size:</span>
+                <span class="upload-info-value" id="fileSizeInfo"></span>
+            </div>
+        </div>
+
+        <div id="progressSection" class="progress-section">
+            <div class="progress-label">
+                <span>Upload Progress</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-value">
+                <span id="bytesUploaded">0 B</span> / <span id="totalBytes">0 B</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.origin + '/api';
+        const CONCURRENT_CHUNKS = 3;
+        let config = {};
+
+        // State management
+        const state = {
+            uploadId: null,
+            file: null,
+            uploadData: null,
+            isUploading: false,
+            uploadedChunks: new Set(),
+            totalChunks: 0
+        };
+
+        // Utility functions
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function showMessage(message, type = 'info') {
+            const msgEl = document.getElementById('statusMessage');
+            msgEl.textContent = message;
+            msgEl.className = `status-message active ${type}`;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/config`);
+                config = await response.json();
+                state.totalChunks = Math.ceil((state.file.size || 0) / config.chunk_size);
+            } catch (error) {
+                showMessage('Failed to load configuration: ' + error.message, 'error');
+            }
+        }
+
+        // File selection handler
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            state.file = file;
+            document.getElementById('fileSize').textContent = formatBytes(file.size);
+            showMessage('File selected: ' + file.name, 'info');
+        });
+
+        // Upload button handler
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            if (!state.file) {
+                showMessage('Please select a file first', 'warning');
+                return;
+            }
+
+            await initializeUpload();
+        });
+
+        // Resume button handler
+        document.getElementById('resumeBtn').addEventListener('click', async () => {
+            if (!state.uploadId) {
+                showMessage('No upload to resume', 'warning');
+                return;
+            }
+
+            await resumeUpload();
+        });
+
+        // Cancel button handler
+        document.getElementById('cancelBtn').addEventListener('click', async () => {
+            if (!state.uploadId) return;
+
+            if (!confirm('Are you sure you want to cancel this upload?')) return;
+
+            try {
+                await fetch(`${API_BASE}/upload/${state.uploadId}`, {
+                    method: 'DELETE'
+                });
+
+                resetUpload();
+                showMessage('Upload cancelled', 'info');
+            } catch (error) {
+                showMessage('Failed to cancel upload: ' + error.message, 'error');
+            }
+        });
+
+        // Initialize upload
+        async function initializeUpload() {
+            try {
+                showMessage('Initializing upload...', 'info');
+                document.getElementById('uploadBtn').disabled = true;
+
+                const response = await fetch(`${API_BASE}/upload/init`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: state.file.name,
+                        file_size: state.file.size
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to initialize upload');
+                }
+
+                const data = await response.json();
+                state.uploadId = data.upload_id;
+
+                // Load configuration
+                await loadConfig();
+
+                // Show upload info
+                document.getElementById('uploadId').textContent = state.uploadId;
+                document.getElementById('filename').textContent = state.file.name;
+                document.getElementById('fileSizeInfo').textContent = formatBytes(state.file.size);
+                document.getElementById('uploadInfo').classList.add('active');
+                document.getElementById('progressSection').classList.add('active');
+                document.getElementById('uploadBtn').style.display = 'none';
+                document.getElementById('cancelBtn').style.display = 'block';
+
+                showMessage('Upload initialized. Starting chunk uploads...', 'success');
+
+                // Start uploading chunks
+                await uploadChunks();
+            } catch (error) {
+                showMessage('Upload initialization failed: ' + error.message, 'error');
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        }
+
+        // Upload chunks
+        async function uploadChunks() {
+            state.isUploading = true;
+
+            try {
+                // Get already uploaded chunks
+                const uploadedChunks = new Set(state.uploadedChunks);
+                const totalChunks = Math.ceil(state.file.size / config.chunk_size);
+
+                // Upload chunks concurrently
+                for (let i = 0; i < totalChunks; i += CONCURRENT_CHUNKS) {
+                    const batch = [];
+
+                    for (let j = i; j < i + CONCURRENT_CHUNKS && j < totalChunks; j++) {
+                        if (!uploadedChunks.has(j)) {
+                            batch.push(uploadChunk(j));
+                        }
+                    }
+
+                    if (batch.length > 0) {
+                        await Promise.all(batch);
+                    }
+                }
+
+                // Complete upload
+                await completeUpload();
+            } catch (error) {
+                showMessage('Error during upload: ' + error.message, 'error');
+                if (document.getElementById('autoResume').checked) {
+                    document.getElementById('uploadBtn').style.display = 'none';
+                    document.getElementById('resumeBtn').style.display = 'block';
+                    document.getElementById('cancelBtn').style.display = 'block';
+                }
+            } finally {
+                state.isUploading = false;
+            }
+        }
+
+        // Upload single chunk
+        async function uploadChunk(chunkIndex) {
+            try {
+                const start = chunkIndex * config.chunk_size;
+                const end = Math.min(start + config.chunk_size, state.file.size);
+                const chunk = state.file.slice(start, end);
+
+                const formData = new FormData();
+                formData.append('upload_id', state.uploadId);
+                formData.append('chunk_index', chunkIndex);
+                formData.append('file', chunk);
+
+                const response = await fetch(`${API_BASE}/upload/chunk`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Chunk upload failed');
+                }
+
+                const data = await response.json();
+                state.uploadedChunks.add(chunkIndex);
+
+                // Update progress
+                updateProgress(data.progress_percentage);
+
+                console.log(`Chunk ${chunkIndex} uploaded successfully`);
+            } catch (error) {
+                console.error(`Error uploading chunk ${chunkIndex}:`, error.message);
+                throw error;
+            }
+        }
+
+        // Complete upload
+        async function completeUpload() {
+            try {
+                showMessage('Finalizing upload...', 'info');
+
+                const response = await fetch(`${API_BASE}/upload/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ upload_id: state.uploadId })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to complete upload');
+                }
+
+                const data = await response.json();
+                showMessage(
+                    `✅ Upload completed! File: ${data.filename}, Size: ${formatBytes(data.file_size)}, Blocks: ${data.blocks_count}`,
+                    'success'
+                );
+
+                resetUpload();
+            } catch (error) {
+                showMessage('Failed to complete upload: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // Resume upload
+        async function resumeUpload() {
+            try {
+                showMessage('Resuming upload...', 'info');
+
+                const response = await fetch(`${API_BASE}/upload/resume/${state.uploadId}`);
+
+                if (!response.ok) {
+                    // Clear stale upload session from localStorage if not found
+                    if (response.status === 404) {
+                        localStorage.removeItem('currentUploadId');
+                        state.uploadId = null;
+                    }
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to resume upload');
+                }
+
+                const data = await response.json();
+
+                // Restore state
+                state.uploadedChunks = new Set(data.block_ids.map((_, i) => i));
+                state.totalChunks = Math.ceil(data.file_size / data.chunk_size);
+                config.chunk_size = data.chunk_size;
+
+                showMessage(`Resume: ${data.completed_chunks}/${state.totalChunks} chunks already uploaded`, 'info');
+                document.getElementById('resumeBtn').style.display = 'none';
+                document.getElementById('uploadBtn').style.display = 'none';
+                document.getElementById('cancelBtn').style.display = 'block';
+
+                // Continue uploading remaining chunks
+                await uploadChunks();
+            } catch (error) {
+                showMessage('Failed to resume upload: ' + error.message, 'error');
+                // Reset UI on failure
+                document.getElementById('resumeBtn').style.display = 'none';
+                document.getElementById('uploadBtn').style.display = 'block';
+                document.getElementById('cancelBtn').style.display = 'none';
+            }
+        }
+
+        // Update progress UI
+        function updateProgress(percentage) {
+            const percent = Math.round(percentage);
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressFill').style.width = percent + '%';
+
+            const bytesUploaded = Math.round((state.file.size * percent) / 100);
+            document.getElementById('bytesUploaded').textContent = formatBytes(bytesUploaded);
+            document.getElementById('totalBytes').textContent = formatBytes(state.file.size);
+        }
+
+        // Reset upload state
+        function resetUpload() {
+            state.uploadId = null;
+            state.uploadedChunks.clear();
+            document.getElementById('uploadBtn').style.display = 'block';
+            document.getElementById('resumeBtn').style.display = 'none';
+            document.getElementById('cancelBtn').style.display = 'none';
+            document.getElementById('uploadBtn').disabled = false;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('uploadInfo').classList.remove('active');
+            document.getElementById('progressSection').classList.remove('active');
+            updateProgress(0);
+        }
+
+        // Check for existing upload on page load
+        window.addEventListener('load', () => {
+            const savedUploadId = localStorage.getItem('currentUploadId');
+            if (savedUploadId && document.getElementById('autoResume').checked) {
+                state.uploadId = savedUploadId;
+                document.getElementById('uploadBtn').style.display = 'none';
+                document.getElementById('resumeBtn').style.display = 'block';
+                document.getElementById('cancelBtn').style.display = 'block';
+                showMessage('Previous upload found. Click "Resume Upload" to continue.', 'info');
+            }
+        });
+
+        // Save upload ID to localStorage
+        const uploadIdEl = document.getElementById('uploadId');
+        const observer = new MutationObserver(() => {
+            if (state.uploadId) {
+                localStorage.setItem('currentUploadId', state.uploadId);
+            }
+        });
+        observer.observe(uploadIdEl, { childList: true });
+    </script>
+</body>
+</html>
