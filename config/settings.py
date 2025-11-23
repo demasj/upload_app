@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     
     # Upload settings
-    max_upload_size: int = 100 * 1024 * 1024  # 100MB
+    max_upload_size: int = 1099511627776  # 1 TB
     upload_directory: str = "./uploads"
     
     # Azure Storage settings (optional for local development)
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     
     # Chunk settings
     chunk_size: int = int(os.getenv("CHUNK_SIZE", 52428800))  # 50MB
-    max_file_size: int = int(os.getenv("MAX_FILE_SIZE", 1099511627776))  # 1TB
+    max_file_size: int = int(os.getenv("MAX_FILE_SIZE", 1099511627776))  # 1 TB
 
     class Config:
         env_file = ".env"

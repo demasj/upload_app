@@ -1,53 +1,99 @@
 # Large File Upload to Azure Blob Storage
 
-A FastAPI-based web application that enables users to upload extremely large files (up to 1 TB) to Azure Blob Storage in a resumable, chunked, and fault-tolerant manner.
+A production-ready web application for uploading extremely large files (up to 1 TB) to Azure Blob Storage with resumable, chunked, and fault-tolerant capabilities.
 
-## Features
+## ✨ Features
 
 - 📤 **Chunked Uploads**: Break large files into manageable 50MB chunks
 - 🔄 **Resumable Uploads**: Resume interrupted uploads from where they stopped
 - 💾 **Multiple Storage Backends**: Redis, PostgreSQL, SQLite, or file-based storage for metadata
-- 🚀 **Concurrent Chunk Uploads**: Upload multiple chunks simultaneously (default: 3 concurrent)
-- 📊 **Real-time Progress**: Track upload progress in real-time
+- 🚀 **Concurrent Chunk Uploads**: Upload multiple chunks simultaneously
+- 📊 **Real-time Progress**: Track upload progress with speed indicators
 - 🔐 **Azure Block Blob API**: Uses stage_block + commit_block_list for reliability
-- 🌐 **CORS Enabled**: Works with frontend and backend on different domains
-- 📱 **Auto-Resume**: Automatically resume on connection loss (optional)
+- 🌐 **Web Interface**: Streamlit-based frontend for easy file uploads
+- 🐳 **Docker Support**: Complete containerized deployment with Azurite emulator
 
-## System Architecture
+## 🏗️ Architecture
 
 ```
 ┌─────────────┐
-│  Frontend   │ (HTML/JS in /frontend)
-│  (Browser)  │
+│  Streamlit  │ (Port 8501)
+│  Frontend   │
 └──────┬──────┘
-       │
-       │ HTTP/WebSocket
+       │ HTTP
        │
 ┌──────▼──────────────────────┐
-│   FastAPI Backend           │
+│   FastAPI Backend           │ (Port 8001)
 │  /api/upload/*              │
-│  - init                      │
-│  - chunk                     │
-│  - complete                  │
-│  - status                    │
-│  - resume                    │
-│  - delete                    │
+│  - init, chunk, complete    │
+│  - status, resume, delete   │
 └──────┬──────────────────────┘
        │
        ├─────────────────┬──────────────────┐
        │                 │                  │
 ┌──────▼───┐    ┌────────▼─────┐   ┌──────▼─────┐
 │  Storage  │    │Azure Blob    │   │   Config   │
-│ Backend   │    │ Storage API  │   │ & Settings │
+│ Backend   │    │ Storage      │   │ & Settings │
 │(Redis/    │    │              │   │            │
-│ File/DB)  │    │ stage_block  │   │            │
-└───────────┘    │ commit_block │   └────────────┘
-                 └──────────────┘
+│ File/DB)  │    │              │   └────────────┘
+└───────────┘    └──────────────┘
 ```
 
-## Prerequisites
+## 🚀 Quick Start
+
+### With Docker (Recommended)
+
+```bash
+# Clone and navigate to project
+cd upload_app
+
+# Start all services (backend, frontend, Redis, Azurite)
+docker-compose -f docker-compose.local.yml up --build
+
+# Access the application
+# Frontend: http://localhost:8501
+# Backend API: http://localhost:8001
+```
+
+### Local Development
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure Azure credentials (optional for local testing)
+cp config/.env.example config/.env
+# Edit config/.env with your Azure credentials
+
+# Start backend
+python backend/main.py
+
+# Start frontend (in another terminal)
+cd frontend && streamlit run app.py
+```
+
+## 📋 Requirements
 
 - Python 3.11+
+- Docker & Docker Compose (for containerized deployment)
+- Azure Storage Account (optional for local development with Azurite)
+
+## 📚 Documentation
+
+- **[Developer Guide](DEVELOPMENT.md)**: Complete setup, API reference, and development instructions
+- **API Documentation**: Available at `http://localhost:8001/docs` when running
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 - Virtual environment (.venv)
 - **Optional**: Azure Storage Account (for production)
 - **Optional**: Redis (for production, defaults to localhost for development)

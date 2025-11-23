@@ -1,0 +1,16 @@
+<div class="upload-container">
+    <h3>Direct Browser Upload</h3>
+    <p>This uploader sends files directly from your browser to the server without loading them into memory.</p>
+
+    <input type="file" id="fileInput" class="file-input">
+    <label for="fileInput" class="choose-file-btn">Choose File</label>
+    <button id="uploadButton" class="upload-btn">Start Upload</button>
+
+    <div id="progressContainer" class="progress-container">
+        <div>
+            <progress id="progressBar" class="progress-bar" value="0" max="100"></progress>
+        </div>
+        <div id="progressText" class="progress-text">0%</div>
+        <div id="statusText" class="status-text"></div>
+    </div>
+</div>

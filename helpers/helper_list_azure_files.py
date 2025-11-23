@@ -7,15 +7,51 @@ from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
 
 # Load environment variables
+# Load .env.local first, then fall back to .env for convenience
 load_dotenv('.env.local')
+load_dotenv()  # load .env if present
+
+
+def get_connection_string_from_argv(argv):
+    """Check argv for a --conn <connection_string> option."""
+    if '--conn' in argv:
+        idx = argv.index('--conn')
+        if idx + 1 < len(argv):
+            return argv[idx + 1]
+    return None
+
+
+def get_connection_string(argv=None):
+    """Resolve Azure connection string from CLI arg or environment.
+
+    Order of precedence:
+      1. CLI: --conn <connection_string>
+      2. Env: AZURE_STORAGE_CONNECTION_STRING
+      3. Env: AZURE_CONNECTION_STRING
+    """
+    argv = argv or sys.argv[1:]
+    # CLI option (highest precedence)
+    conn = get_connection_string_from_argv(list(argv))
+    if conn:
+        return conn
+
+    # Environment variables
+    conn = os.getenv('AZURE_STORAGE_CONNECTION_STRING') or os.getenv('AZURE_CONNECTION_STRING')
+    return conn
 
 def list_files():
     """List all uploaded files in Azurite."""
-    connection_string = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
+    connection_string = get_connection_string()
     container_name = os.getenv('AZURE_STORAGE_CONTAINER_NAME', 'uploads')
     
     if not connection_string:
-        print("❌ AZURE_STORAGE_CONNECTION_STRING not set in .env.local")
+        print("❌ AZURE Storage connection string not found.")
+        print("Provide it via one of these options:")
+        print("  - set AZURE_STORAGE_CONNECTION_STRING or AZURE_CONNECTION_STRING in your environment or .env(.local)")
+        print("  - pass it on the command line: --conn '<connection string>'")
+        print()
+        print("Example Azurite connection string (for local dev):")
+        print("DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;")
         sys.exit(1)
     
     try:
@@ -50,7 +86,7 @@ def list_files():
 
 def download_file(filename, output_path=None):
     """Download a file from Azurite."""
-    connection_string = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
+    connection_string = get_connection_string()
     container_name = os.getenv('AZURE_STORAGE_CONTAINER_NAME', 'uploads')
     
     if not output_path:

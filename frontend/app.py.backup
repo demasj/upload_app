@@ -1,0 +1,189 @@
+import streamlit as st
+import requests
+import sys
+import os
+
+# Add the project root to the path to import config
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from config.settings import get_settings
+
+# Backend API base URL
+API_BASE = "http://localhost:8000/api/upload"
+
+# Get settings
+settings = get_settings()
+api_base = API_BASE
+chunk_size = settings.chunk_size
+
+st.title("Large File Upload to Azure Blob Storage")
+
+st.markdown("""
+Upload large files to Azure Blob Storage using chunked uploads.
+The file will be split into chunks and uploaded progressively.
+""")
+
+# Custom file uploader component using HTML/JS to avoid loading file into memory
+file_uploader_html = f"""
+<div>
+    <input type="file" id="fileInput" style="margin-bottom: 10px;">
+    <button id="uploadButton" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer;">Start Upload</button>
+    <div id="progressContainer" style="margin-top: 10px; display: none;">
+        <progress id="progressBar" value="0" max="100" style="width: 100%;"></progress>
+        <div id="progressText">0%</div>
+    </div>
+    <div id="status"></div>
+</div>
+
+<script>
+const apiBase = "{api_base}";
+const chunkSize = {chunk_size};
+
+let uploadId = null;
+let file = null;
+
+document.getElementById('fileInput').addEventListener('change', function(e) {{
+    file = e.target.files[0];
+    if (file) {{
+        document.getElementById('status').innerText = `Selected: ${{file.name}} (${{file.size}} bytes)`;
+    }}
+}});
+
+document.getElementById('uploadButton').addEventListener('click', async function() {{
+    if (!file) {{
+        alert('Please select a file first');
+        return;
+    }
+
+    document.getElementById('uploadButton').disabled = true;
+    document.getElementById('progressContainer').style.display = 'block';
+    document.getElementById('status').innerText = 'Initializing upload...';
+
+    try {{
+        // Initialize upload
+        const initResponse = await fetch(`${{apiBase}}/init`, {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{
+                filename: file.name,
+                file_size: file.size
+            }})
+        }});
+
+        if (!initResponse.ok) {{
+            throw new Error(`Init failed: ${{initResponse.statusText}}`);
+        }}
+
+        const initData = await initResponse.json();
+        uploadId = initData.upload_id;
+        const actualChunkSize = initData.chunk_size;
+
+        document.getElementById('status').innerText = `Upload ID: ${{uploadId}}. Starting upload...`;
+
+        // Upload chunks
+        const totalChunks = Math.ceil(file.size / actualChunkSize);
+        let uploadedChunks = 0;
+
+        for (let i = 0; i < totalChunks; i++) {{
+            const start = i * actualChunkSize;
+            const end = Math.min(start + actualChunkSize, file.size);
+            const chunk = file.slice(start, end);
+
+            const formData = new FormData();
+            formData.append('upload_id', uploadId);
+            formData.append('chunk_index', i);
+            formData.append('file', chunk);
+
+            const chunkResponse = await fetch(`${{apiBase}}/chunk`, {{
+                method: 'POST',
+                body: formData
+            }});
+
+            if (!chunkResponse.ok) {{
+                throw new Error(`Chunk upload failed: ${{chunkResponse.statusText}}`);
+            }}
+
+            uploadedChunks++;
+            const progress = Math.round((uploadedChunks / totalChunks) * 100);
+            document.getElementById('progressBar').value = progress;
+            document.getElementById('progressText').innerText = `${{progress}}%`;
+            document.getElementById('status').innerText = `Uploaded chunk ${{uploadedChunks}}/${{totalChunks}}`;
+        }}
+
+        // Complete upload
+        const completeResponse = await fetch(`${{apiBase}}/complete`, {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{ upload_id: uploadId }})
+        }});
+
+        if (!completeResponse.ok) {{
+            throw new Error(`Complete failed: ${{completeResponse.statusText}}`);
+        }}
+
+        const completeData = await completeResponse.json();
+        document.getElementById('status').innerText = 'Upload completed successfully!';
+        alert('Upload completed!');
+
+    }} catch (error) {{
+        document.getElementById('status').innerText = `Error: ${{error.message}}`;
+        alert(`Upload failed: ${{error.message}}`);
+    }} finally {{
+        document.getElementById('uploadButton').disabled = false;
+    }}
+}});
+</script>
+""".format(API_BASE, settings.chunk_size)
+
+st.components.v1.html(file_uploader_html, height=200)
+
+# Status check section
+st.header("Check Upload Status")
+status_upload_id = st.text_input("Enter Upload ID to check status")
+
+if st.button("Check Status"):
+    if status_upload_id:
+        try:
+            status_response = requests.get(f"{API_BASE}/status/{status_upload_id}")
+            if status_response.status_code == 200:
+                status_data = status_response.json()
+                st.json(status_data)
+            else:
+                st.error("Upload not found")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error checking status: {str(e)}")
+    else:
+        st.warning("Please enter an Upload ID")
+
+# Resume upload section
+st.header("Resume Upload")
+resume_upload_id = st.text_input("Enter Upload ID to resume")
+
+if st.button("Resume Upload"):
+    if resume_upload_id:
+        try:
+            resume_response = requests.get(f"{API_BASE}/resume/{resume_upload_id}")
+            resume_response.raise_for_status()
+            resume_data = resume_response.json()
+            st.json(resume_data)
+            st.info("You can continue uploading from where it left off")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error resuming upload: {str(e)}")
+    else:
+        st.warning("Please enter an Upload ID")
+
+# Delete upload section
+st.header("Delete Upload")
+delete_upload_id = st.text_input("Enter Upload ID to delete")
+
+if st.button("Delete Upload"):
+    if delete_upload_id:
+        try:
+            delete_response = requests.delete(f"{API_BASE}/{delete_upload_id}")
+            delete_response.raise_for_status()
+            delete_data = delete_response.json()
+            st.success("Upload deleted successfully!")
+            st.json(delete_data)
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error deleting upload: {str(e)}")
+    else:
+        st.warning("Please enter an Upload ID")
