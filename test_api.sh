@@ -6,7 +6,7 @@ echo "🧪 Testing Large File Upload API"
 echo "=================================="
 echo ""
 
-BASE_URL="http://localhost:8000"
+BASE_URL="http://localhost:8001"
 
 # Colors
 GREEN='\033[0;32m'
@@ -51,6 +51,7 @@ if ! curl -s "$BASE_URL/api/config" > /dev/null 2>&1; then
     echo "Please start the server:"
     echo "  1. source .venv/bin/activate"
     echo "  2. python backend/main.py"
+    echo "  3. streamlit run frontend/app.py (in another terminal)"
     exit 1
 fi
 
@@ -98,9 +99,9 @@ echo -e "${GREEN}✨ API is working correctly!${NC}"
 echo "===================================="
 echo ""
 echo "You can now:"
-echo "1. Open http://localhost:8000/static/index.html in your browser"
+echo "1. Open http://localhost:8501 in your browser"
 echo "2. Select a file and upload it"
 echo "3. Monitor progress in real-time"
 echo ""
 echo "For API documentation, visit:"
-echo "http://localhost:8000/docs"
+echo "http://localhost:8001/docs"

@@ -18,6 +18,13 @@ NC='\033[0m'
 # Get script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# Check if Docker should be used
+if [ "$1" = "docker" ]; then
+    echo -e "${BLUE}Starting with Docker...${NC}"
+    docker-compose -f docker-compose.local.yml up --build
+    exit 0
+fi
+
 # Activate virtual environment
 echo -e "${BLUE}Activating virtual environment...${NC}"
 source "$SCRIPT_DIR/.venv/bin/activate"
@@ -45,9 +52,9 @@ echo ""
 echo -e "${BLUE}Starting FastAPI server...${NC}"
 echo "===================================="
 echo ""
-echo "📍 API Endpoint: http://localhost:8000"
-echo "📖 API Docs: http://localhost:8000/docs"
-echo "🌐 Frontend: http://localhost:8000/static/index.html"
+echo "📍 API Endpoint: http://localhost:8001"
+echo "📖 API Docs: http://localhost:8001/docs"
+echo "🌐 Frontend: http://localhost:8501"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo "===================================="

@@ -69,7 +69,11 @@ echo ""
 # Check Frontend Files
 echo -e "${BLUE}[3] Frontend Files${NC}"
 echo "-------------------"
-check_file "frontend/index.html"
+check_file "frontend/app.py"
+check_file "frontend/static/styles.css"
+check_file "frontend/static/script.js"
+check_file "frontend/static/template.html"
+check_file "frontend/Dockerfile"
 echo ""
 
 # Check Configuration Files
@@ -83,8 +87,7 @@ echo ""
 echo -e "${BLUE}[5] Documentation${NC}"
 echo "-------------------"
 check_file "README.md"
-check_file "QUICKSTART.md"
-check_file "PROJECT_SUMMARY.md"
+check_file "DEVELOPMENT.md"
 echo ""
 
 # Check Deployment Files
@@ -155,11 +158,19 @@ echo ""
 # Port availability check
 echo -e "${BLUE}[9] Port Availability${NC}"
 echo "----------------------"
-if ! lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo -e "${GREEN}✓${NC} Port 8000 is available"
+if ! lsof -Pi :8001 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    echo -e "${GREEN}✓${NC} Port 8001 is available"
     ((CHECKS_PASSED++))
 else
-    echo -e "${YELLOW}⚠${NC} Port 8000 is already in use"
+    echo -e "${YELLOW}⚠${NC} Port 8001 is already in use"
+    ((WARNINGS++))
+fi
+
+if ! lsof -Pi :8501 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    echo -e "${GREEN}✓${NC} Port 8501 is available"
+    ((CHECKS_PASSED++))
+else
+    echo -e "${YELLOW}⚠${NC} Port 8501 is already in use"
     ((WARNINGS++))
 fi
 
@@ -186,7 +197,8 @@ if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
     echo "1. Edit config/.env with your Azure credentials"
     echo "2. Run: source .venv/bin/activate"
     echo "3. Run: python backend/main.py"
-    echo "4. Visit: http://localhost:8000/static/index.html"
+    echo "4. Run: streamlit run frontend/app.py (in another terminal)"
+    echo "5. Visit: http://localhost:8501"
     exit 0
 elif [ $ERRORS -eq 0 ]; then
     echo -e "${YELLOW}⚠️  Please address warnings above${NC}"
